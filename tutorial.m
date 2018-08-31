@@ -1,4 +1,7 @@
 %{
+
+%% Required software
+
 in this tarball you will find the 2 sessions from the same subject (i.e. 101295 is session 1 and
 101363 is session 2).
 
@@ -72,7 +75,7 @@ analyse.RSA=1;
 %% required software --> SPM, GLMdenoise, libSVM, RSA toolbox
 addpath(genpath(fullfile(workingdir,'software','GLMdenoise-1.4')));
 addpath(genpath(fullfile(workingdir,'software','rsatoolbox')));
-addpath(genpath('/imaging/ic01/code/spm8_fil_r5236'));
+addpath(genpath(fullfile(workingdir,'software','spm8')));
 addpath(fullfile(workingdir,'software','libsvm-mat-2.87-1'));
 
 
@@ -240,7 +243,7 @@ if analyse.lSVM
     % control variables
     libSVMsettings='-s 1 -t 0'; % nu-SVM, linear
     nRandomisations=1000;
-    rmpath('/hpc-software/matlab/r2009a/toolbox/bioinfo/biolearning/'); % to make sure libSVM code is used (not strictly necessary: matlab svmtrain yields exactly same model)
+    %rmpath('/hpc-software/matlab/r2009a/toolbox/bioinfo/biolearning/'); % to make sure libSVM code is used (not strictly necessary: matlab svmtrain yields exactly same model)
     
     % linear SVM
     cvFolds=[1 2; 2 1]; % columns = folds, row 1 = session used for training, row 2 = session used for testing
@@ -296,7 +299,8 @@ if analyse.RSA
     % load behavioural RDM and image icons
     extra=load('pair1_subj1_extra.mat','behav_and_icons');
     
-    judgmentRDM = extra.behav_and_icons.RDM;
+    judgmentRDM.RDM  = extra.behav_and_icons.RDM;
+    judgmentRDM.name = 'similarity judgments';
     
     imageIcons  = extra.behav_and_icons.imageData;
     
@@ -327,6 +331,7 @@ if analyse.RSA
     avgRDM = averageRDMs_subjectSession(RDMs,'subject');
     avgRDM.name='hIT RDM averaged across sessions';
     
+    figI=2;
     figure(figI);set(gcf,'Position',[100 100 800 800],'Color','w')
     showRDMs(avgRDM,figI);
     
@@ -437,16 +442,24 @@ if analyse.RSA
     axis tight equal off
       
     % relate hIT and judgments
-    userOptions.candRDMdifferencesTest='none';
-    judgments=cell(1); 
-    judgments{1}=judgmentRDM;
-    stats_p_r=compareRefRDM2candRDMs(avgRDM.RDM, judgments, userOptions);
+    userOptions.analysisName = 'animacyVsJudgments';
+    userOptions.candRDMdifferencesTest='conditionRFXbootstrap';
+    candidateRDMs=cell(1); 
+    candidateRDMs{1}=judgmentRDM;
     
     % ---------------------------------------------------------------------
-    % add a second model
+    % compare the judgements RDM to an animacy model
+    animates=[OwnBodyParts OwnFaces OwnPet OtherBodyParts OtherFaces OtherPet GeneralBodyParts GeneralFaces GeneralPets];
+    inanimates=[OwnPlaces OwnObjects OtherPlaces OtherObjects GeneralPlaces GeneralObjects];
     
+    model.RDM = ones(nImages*2,nImages*2);
+    model.RDM(animates,animates) = 0;
+    model.RDM(inanimates,inanimates) = 0;
+    model.name = 'animacy';    
     
+    candidateRDMs{2}= model;    
        
+    stats_p_r=compareRefRDM2candRDMs(avgRDM.RDM, candidateRDMs, userOptions);
     
     % ---------------------------------------------------------------------
     

@@ -112,7 +112,7 @@ function stats_p_r=compareRefRDM2candRDMs(refRDM, candRDMs, userOptions)
 %       correlation. (Note that multiple independent measurements of the
 %       reference or candidate RDMs could also come from repeated
 %       measurements within one subject. We refer to the instances as
-%       “subjects”, because subject random-effects inference is the most
+%       ï¿½subjectsï¿½, because subject random-effects inference is the most
 %       common case.)
 %
 %       'randomisation': Test the relatedness of the reference RDM to each
@@ -371,6 +371,7 @@ userOptions = setIfUnset(userOptions, 'figureIndex',[1 2]);
 userOptions = setIfUnset(userOptions, 'resultsPath',pwd);
 userOptions = setIfUnset(userOptions, 'saveFigurePDF', true);
 userOptions = setIfUnset(userOptions, 'saveFigurePS', false);
+userOptions = setIfUnset(userOptions, 'saveFigureFig', false);
 userOptions = setIfUnset(userOptions, 'figure1filename', 'compareRefRDM2candRDMs_barGraph');
 userOptions = setIfUnset(userOptions, 'figure2filename', 'compareRefRDM2candRDMs_RDMcomparisonPvalues');
 
@@ -1034,18 +1035,16 @@ handleCurrentFigure([userOptions.resultsPath,filesep,userOptions.figure2filename
 
 
 %% save it
-cd(fullfile(userOptions.rootPath));
-if userOptions.saveFiguresPS
+cd(fullfile(userOptions.resultsPath));
+if userOptions.saveFigurePS
     saveas(gcf,[userOptions.analysisName,'_comparingRefRDM2CandRDMs','.eps'],'eps');
 end
-if userOptions.saveFiguresFig
+if userOptions.saveFigureFig
     saveas(gcf,[userOptions.analysisName,'_comparingRefRDM2CandRDMs','.fig'],'fig');
 end
-if userOptions.saveFiguresPDF
-    exportCurrentFigAsPDF([userOptions.analysisName,'_comparingRefRDM2CandRDMs'],userOptions);
-end
-if userOptions.saveFiguresPS
-    exportCurrentFigAsPostscript([userOptions.analysisName,'.ps'],userOptions);
+if userOptions.saveFigurePDF
+    F = setPapertoFigPos(gcf);
+    saveas(F,[userOptions.analysisName,'_comparingRefRDM2CandRDMs'],'pdf');
 end
 
 
