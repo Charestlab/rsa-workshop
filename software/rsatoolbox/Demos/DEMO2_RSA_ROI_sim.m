@@ -9,15 +9,16 @@
 %%%%%%%%%%%%%%%%%%%%
 %% Initialisation %%
 %%%%%%%%%%%%%%%%%%%%
-clear;clc
-cd ..
+clear;clc;
+cd ..;
 toolboxRoot = pwd; addpath(genpath(toolboxRoot));
-cd Demos
+cd Demos;
 % Generate a userOptions structure and then clone it for the two streams of
 % data
 % in this pipeline. Change only the names.
-mkdir DEMO2
+mkdir DEMO2;
 userOptions_common = projectOptions_demo();
+
 % Generate a simulationOptions structure.
 simulationOptions = simulationOptions_demo();
 
@@ -27,9 +28,9 @@ simulationOptions = simulationOptions_demo();
 
 % Generate the SPM files for each subject containing conditions clustered
 % according to preferences in the simulationOptions.
-promptOptions.checkFiles(1).address = fullfile(userOptions_common.rootPath, 'Details', [userOptions_common.analysisName, '_simulateDataFiles_Details.mat']);
-promptOptions.checkFiles(2).address = fullfile(userOptions_common.rootPath, 'Details', [userOptions_common.analysisName, 'True_fMRIDataPreparation_Details.mat']);
-promptOptions.checkFiles(3).address = fullfile(userOptions_common.rootPath, 'Details', [userOptions_common.analysisName, 'Noisy_fMRIDataPreparation_Details.mat']);
+promptOptions.checkFiles(1).address = fullfile(userOptions_common.rootPath, 'Details', [userOptions_common.projectName, userOptions_common.analysisName, '_simulateDataFiles_Details.mat']);
+promptOptions.checkFiles(2).address = fullfile(userOptions_common.rootPath, 'Details', [userOptions_common.projectName, userOptions_common.analysisName, 'True_fMRIDataPreparation_Details.mat']);
+promptOptions.checkFiles(3).address = fullfile(userOptions_common.rootPath, 'Details', [userOptions_common.projectName, userOptions_common.analysisName, 'Noisy_fMRIDataPreparation_Details.mat']);
 
 for fileCount = 1:numel(promptOptions.checkFiles)
     if exist(promptOptions.checkFiles(fileCount).address, 'file')
@@ -45,15 +46,15 @@ if prod(double(promptFlag))
         userOptions_common.forcePromptReply = 'R';
     end  
 end
-userOptions_true = userOptions_common; userOptions_true.analysisName = [userOptions_true.analysisName 'True'];
-userOptions_noisy = userOptions_common; userOptions_noisy.analysisName = [userOptions_noisy.analysisName 'Noisy'];
-[betaCorrespondence_true,betaCorrespondence_noisy,fMRI] = simulateDataFiles(userOptions_common, simulationOptions);
+userOptions_true = userOptions_common; userOptions_true.projectName = [userOptions_true.projectName 'True'];
+userOptions_noisy = userOptions_common; userOptions_noisy.projectName = [userOptions_noisy.projectName 'Noisy'];
+[betaCorrespondence_true,betaCorrespondence_noisy,fMRI] = rsa.sim.simulateDataFiles(userOptions_common, simulationOptions);
 
 % Load in the 'true' fMRI data
-fullBrainVols_true = fMRIDataPreparation(betaCorrespondence_true, userOptions_true);
+fullBrainVols_true = rsa.fmri.fMRIDataPreparation(betaCorrespondence_true, userOptions_true);
 
 % Load in the 'noisy' fMRI data
-fullBrainVols_noisy = fMRIDataPreparation(betaCorrespondence_noisy, userOptions_noisy);
+fullBrainVols_noisy = rsa.fmri.fMRIDataPreparation(betaCorrespondence_noisy, userOptions_noisy);
 
 % Name the RoIs for both streams of data
 RoIName = 'SimRoI';
@@ -67,46 +68,46 @@ responsePatterns_noisy.(['noisy' RoIName]) = fullBrainVols_noisy;
 % Construct RDMs for the 'true' data. One RDM for each subject (sessions
 % have
 % not been simulated) and one for the average across subjects.
-RDMs_true = constructRDMs(responsePatterns_true, betaCorrespondence_true, userOptions_true);
-RDMs_true = averageRDMs_subjectSession(RDMs_true, 'session');
-averageRDMs_true = averageRDMs_subjectSession(RDMs_true, 'subject');
+RDMs_true = rsa.constructRDMs(responsePatterns_true, betaCorrespondence_true, userOptions_true);
+RDMs_true = rsa.rdm.averageRDMs_subjectSession(RDMs_true, 'session');
+averageRDMs_true = rsa.rdm.averageRDMs_subjectSession(RDMs_true, 'subject');
 
 % Do the same for the 'noisy' data.
-RDMs_noisy = constructRDMs(responsePatterns_noisy, betaCorrespondence_noisy, userOptions_noisy);
-RDMs_noisy = averageRDMs_subjectSession(RDMs_noisy, 'session');
-averageRDMs_noisy = averageRDMs_subjectSession(RDMs_noisy, 'subject');
+RDMs_noisy = rsa.constructRDMs(responsePatterns_noisy, betaCorrespondence_noisy, userOptions_noisy);
+RDMs_noisy = rsa.rdm.averageRDMs_subjectSession(RDMs_noisy, 'session');
+averageRDMs_noisy = rsa.rdm.averageRDMs_subjectSession(RDMs_noisy, 'subject');
 
 % Prepare the model RDMs.
-RDMs_model = constructModelRDMs(modelRDMs_demo2, userOptions_common);
+RDMs_model = rsa.constructModelRDMs(modelRDMs_demo2, userOptions_common);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 %% First-order analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % % Display the three sets of RDMs: true, noisy and model
-figureRDMs(concatenateRDMs(RDMs_true, averageRDMs_true), userOptions_true, struct('fileName', 'noiselessRDMs', 'figureNumber', 1));
-figureRDMs(concatenateRDMs(RDMs_noisy, averageRDMs_noisy), userOptions_noisy, struct('fileName', 'noisyRDMs', 'figureNumber', 2));
-figureRDMs(RDMs_model, userOptions_common, struct('fileName', 'modelRDMs', 'figureNumber', 3));
+rsa.figureRDMs(rsa.rdm.concatenateRDMs(RDMs_true, averageRDMs_true), userOptions_true, struct('fileName', 'noiselessRDMs', 'figureNumber', 1));
+rsa.figureRDMs(rsa.rdm.concatenateRDMs(RDMs_noisy, averageRDMs_noisy), userOptions_noisy, struct('fileName', 'noisyRDMs', 'figureNumber', 2));
+rsa.figureRDMs(RDMs_model, userOptions_common, struct('fileName', 'modelRDMs', 'figureNumber', 3));
 % 
 % Determine dendrograms for the clustering of the conditions for the two data
 % streams
 [blankConditionLabels{1:size(RDMs_model(1).RDM, 2)}] = deal(' ');
-dendrogramConditions(averageRDMs_true, userOptions_true, struct('titleString', 'Dendrogram of conditions without simulated noise', 'useAlternativeConditionLabels', true, 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 4));
-dendrogramConditions(averageRDMs_noisy, userOptions_noisy, struct('titleString', 'Dendrogram of conditions with simulated noise', 'useAlternativeConditionLabels', true, 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 5));
+rsa.dendrogramConditions(averageRDMs_true, userOptions_true, struct('titleString', 'Dendrogram of conditions without simulated noise', 'useAlternativeConditionLabels', true, 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 4));
+rsa.dendrogramConditions(averageRDMs_noisy, userOptions_noisy, struct('titleString', 'Dendrogram of conditions with simulated noise', 'useAlternativeConditionLabels', true, 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 5));
 % 
 % Display MDS plots for the condition sets for both streams of data
-MDSConditions(averageRDMs_true, userOptions_true, struct('titleString', 'MDS of conditions without simulated noise', 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 6));
-MDSConditions(averageRDMs_noisy, userOptions_noisy, struct('titleString', 'MDS of conditions with simulated noise', 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 7));
+rsa.MDSConditions(averageRDMs_true, userOptions_true, struct('titleString', 'MDS of conditions without simulated noise', 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 6));
+rsa.MDSConditions(averageRDMs_noisy, userOptions_noisy, struct('titleString', 'MDS of conditions with simulated noise', 'alternativeConditionLabels', {blankConditionLabels}, 'figureNumber', 7));
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Second-order analysis %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Display a second-order simmilarity matrix for the models and the true and noisy simulated pattern RDMs
-pairwiseCorrelateRDMs({averageRDMs_true, averageRDMs_noisy, RDMs_model}, userOptions_common, struct('figureNumber', 8));
+rsa.pairwiseCorrelateRDMs({averageRDMs_true, averageRDMs_noisy, RDMs_model}, userOptions_common, struct('figureNumber', 8));
 
 % Plot all RDMs on a MDS plot to visualise pairwise distances.
-MDSRDMs({averageRDMs_true, averageRDMs_noisy, RDMs_model}, userOptions_common, struct('titleString', 'MDS of noisy RDMs and models', 'figureNumber', 11));
+rsa.MDSRDMs({averageRDMs_true, averageRDMs_noisy, RDMs_model}, userOptions_common, struct('titleString', 'MDS of noisy RDMs and models', 'figureNumber', 11));
  
 for i=1:numel(RDMs_model)
     models{i}=RDMs_model(i);
@@ -125,4 +126,4 @@ userOptions.RDMrelatednessMultipleTesting = 'FDR';
 userOptions.candRDMdifferencesTest = 'subjectRFXsignedRank';
 userOptions.candRDMdifferencesThreshold = 0.05;
 userOptions.candRDMdifferencesMultipleTesting = 'none';
-stats_p_r=compareRefRDM2candRDMs(RDMs_noisy, models, userOptions);
+stats_p_r=rsa.compareRefRDM2candRDMs(RDMs_noisy, models, userOptions);

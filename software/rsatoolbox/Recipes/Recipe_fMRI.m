@@ -8,43 +8,48 @@
 %% Initialisation %%
 %%%%%%%%%%%%%%%%%%%%
 
-toolboxRoot = 'toolboxPathOnYourMachine'; addpath(genpath(toolboxRoot));
+% add spm path
+addpath(genpath('spm8path'));
+
+toolboxRoot = '/media/bluebear/software/rsatoolbox-branch/rsatoolbox'; addpath(genpath(toolboxRoot)); cd(fullfile(toolboxRoot,'Recipes'))
 userOptions = defineUserOptions();
 
 %%%%%%%%%%%%%%%%%%%%%%
 %% Data preparation %%
 %%%%%%%%%%%%%%%%%%%%%%
 
-fullBrainVols = fMRIDataPreparation('SPM', userOptions);
-binaryMasks_nS = fMRIMaskPreparation(userOptions);
-responsePatterns = fMRIDataMasking(fullBrainVols, binaryMasks_nS, 'SPM', userOptions);
+% edit the betaCorrespondence.m file to reflect your beta or t-maps structure
+
+fullBrainVols = rsa.fmri.fMRIDataPreparation(betaCorrespondence, userOptions);
+binaryMasks_nS = rsa.fmri.fMRIMaskPreparation(userOptions);
+responsePatterns = rsa.fmri.fMRIDataMasking(fullBrainVols, binaryMasks_nS, betaCorrespondence, userOptions);
 
 %%%%%%%%%%%%%%%%%%%%%
 %% RDM calculation %%
 %%%%%%%%%%%%%%%%%%%%%
 
-RDMs = constructRDMs(responsePatterns, 'SPM', userOptions);
-sRDMs = averageRDMs_subjectSession(RDMs, 'session');
-RDMs = averageRDMs_subjectSession(RDMs, 'session', 'subject');
+RDMs  = rsa.constructRDMs(responsePatterns, betaCorrespondence, userOptions);
+sRDMs = rsa.rdm.averageRDMs_subjectSession(RDMs, 'session');
+RDMs  = rsa.rdm.averageRDMs_subjectSession(RDMs, 'session', 'subject');
 
-Models = constructModelRDMs(modelRDMs(), userOptions);
+Models = rsa.constructModelRDMs(modelRDMs(), userOptions);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% First-order visualisation %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-figureRDMs(RDMs, userOptions, struct('fileName', 'RoIRDMs', 'figureNumber', 1));
-figureRDMs(Models, userOptions, struct('fileName', 'ModelRDMs', 'figureNumber', 2));
+rsa.figureRDMs(RDMs, userOptions, struct('fileName', 'RoIRDMs', 'figureNumber', 1));
+rsa.figureRDMs(Models, userOptions, struct('fileName', 'ModelRDMs', 'figureNumber', 2));
 
-MDSConditions(RDMs, userOptions);
-dendrogramConditions(RDMs, userOptions);
+rsa.MDSConditions(RDMs, userOptions);
+rsa.dendrogramConditions(RDMs, userOptions);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% relationship amongst multiple RDMs %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pairwiseCorrelateRDMs({RDMs, Models}, userOptions);
-MDSRDMs({RDMs, Models}, userOptions);
+rsa.pairwiseCorrelateRDMs({RDMs, Models}, userOptions);
+rsa.MDSRDMs({RDMs, Models}, userOptions);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% statistical inference %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -54,11 +59,11 @@ for i=1:numel(Models)
     models{i}=Models(i);
 end
 userOptions.RDMcorrelationType='Kendall_taua';
-userOptions.RDMrelatednessTest = 'subjectRFXsignedRank';
+userOptions.RDMrelatednessTest = 'randomisation';% 'subjectRFXsignedRank';
 userOptions.RDMrelatednessThreshold = 0.05;
 userOptions.figureIndex = [10 11];
 userOptions.RDMrelatednessMultipleTesting = 'FDR';
-userOptions.candRDMdifferencesTest = 'subjectRFXsignedRank';
+userOptions.candRDMdifferencesTest = 'conditionRFXbootstrap';%'subjectRFXsignedRank';
 userOptions.candRDMdifferencesThreshold = 0.05;
 userOptions.candRDMdifferencesMultipleTesting = 'none';
-stats_p_r=compareRefRDM2candRDMs(RDMs(roiIndex), models, userOptions);
+stats_p_r=rsa.compareRefRDM2candRDMs(RDMs(roiIndex), models, userOptions);

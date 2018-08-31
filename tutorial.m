@@ -64,21 +64,30 @@ inanimates = [places objects];
 
 %}
 
-clear all
+clear
 clc
 [workingdir,file,ext] = fileparts(which('rsa_tutorial'));
 
+analyse.rerunGLMdenoise=0;
 analyse.lSVM=0;
 analyse.RSA=1;
-
-
+analyse.RSAsearchlight=1;
+analyse.nRandomisations=1000;
 %% required software --> SPM, GLMdenoise, libSVM, RSA toolbox
 addpath(genpath(fullfile(workingdir,'software','GLMdenoise-1.4')));
 addpath(genpath(fullfile(workingdir,'software','rsatoolbox')));
 addpath(genpath(fullfile(workingdir,'software','spm8')));
 addpath(fullfile(workingdir,'software','libsvm-mat-2.87-1'));
 
-
+%% import the rsa toolbox
+import rsa.*
+import rsa.fig.*
+import rsa.fmri.*
+import rsa.rdm.*
+import rsa.sim.*
+import rsa.spm.*
+import rsa.stat.*
+import rsa.util.*
 %% control parameters
 
 nRuns        = 9;   % there was a total of 9 runs per subject and session
@@ -175,7 +184,7 @@ for sessionI = 1:nSessions
     xlabel('\bf{number of conditions}')
     title(sprintf('design matrix for run 1 session %d',sessionI),'FontSize',14,'Fontweight','bold')
     
-    if ~(exist(fullfile(workingdir,'tpatterns','tpatterns.mat'),'file'))
+    if ~(exist(fullfile(workingdir,'tpatterns','tpatterns.mat'),'file')) || analyse.rerunGLMdenoise==1
         data = cell(1,nRuns);
         % load the nifti data;
         for runI=1:nRuns
@@ -197,6 +206,15 @@ for sessionI = 1:nSessions
         poolse  = sqrt(mean(modelse.^2,4));
         % normalise the betas by the pooled error to get t-patterns
         modelmd = bsxfun(@rdivide,modelmd,poolse);
+        
+        % plot one run's design matrix
+        figure(1);
+        set(gcf,'Position',[100 100 400 800],'Color','w')
+        imagesc(results.parametric.designmatrix);colormap(gray)
+        ylabel('\bf{number of volumes}')
+        xlabel('\bf{number of conditions}')
+        title(sprintf('design matrix with noise covariates for session %d',sessionI),'FontSize',14,'Fontweight','bold')
+
         
         % show the unmasked patterns
         figure(1);
@@ -220,7 +238,7 @@ for sessionI = 1:nSessions
 end
 
 % save the data if not existing already otherwise load it
-if ~(exist(fullfile(workingdir,'tpatterns','tpatterns.mat'),'file'))
+if ~(exist(fullfile(workingdir,'tpatterns','tpatterns.mat'),'file')) || analyse.rerunGLMdenoise==1
     % save the t-patterns
     save(fullfile(workingdir,'tpatterns','tpatterns.mat'),'tpatterns')
 else
@@ -260,7 +278,7 @@ if analyse.lSVM
         accuracy_fold(foldI)=accuracy(1);
         
         % create null distribution for statistical inference
-        for randomisationI=1:nRandomisations
+        for randomisationI=1:analyse.nRandomisations
             % randomise labels (for training)
             labelsRand=labels(randperm(length(labels)));
             % train and test the classifier using the randomised training labels
@@ -280,12 +298,12 @@ if analyse.lSVM
     % plot null distribution
     hist(accuracyH0); hold on;
     % plot accuracy (mean across folds) found in the data
-    xlim([5 95]); xlims=xlim;
+    xlim([2.5 97.5]); xlims=xlim;
     plot(accuracy,0,'o','MarkerEdgeColor','r','MarkerFaceColor','r','MarkerSize',8);
     ylims=ylim;
     text(accuracy,0.04*ylims(2),'\bfdata','Color','r');
     % plot statistical result
-    text(0.85*xlims(2),0.9*ylims(2),['p = ',sprintf('%1.4f',p)]);
+    text(0.75*xlims(2),0.9*ylims(2),['p = ',sprintf('%1.4f',p)]);
     % label axes
     xlabel('accuracy');
     ylabel('frequency');
@@ -321,13 +339,49 @@ if analyse.RSA
     % show the 2 session RDMs
     figI=1;
     figure(figI);clf;set(gcf,'Position',[100 100 800 800],'Color','w')
-    showRDMs(RDMs,figI);
+    rsa.fig.showRDMs(RDMs,figI);
     
     % ---------------------------------------------------------------------
     % compare RDMs across sessions 
-    r12=corr([vectorizeRDMs(RDMs(1).RDM)]',[vectorizeRDMs(RDMs(2).RDM)]');
+    r12=corr(rsa.rdm.vectorizeRDMs(RDMs(1).RDM)',rsa.rdm.vectorizeRDMs(RDMs(2).RDM)');
     % ---------------------------------------------------------------------
     
+    fprintf('\n\n\n#################\n RDM replicability across sessions: %.4f (Pearson R) \n#################\n',r12);
+       
+    %single subject statistics to test whether RDM day 1 is sig related to RDM day 2
+    
+    rdm1 = rsa.rdm.vectorizeRDMs(RDMs(1).RDM)';
+    rdm2 = RDMs(2).RDM;
+    corrH0 = nan(1,analyse.nRandomisations);
+    for randomisationI=1:analyse.nRandomisations
+        
+        % here we randomise the condition labels (rows and columns) for day
+        % 2 RDM
+        labelsRand=randperm(length(RDMs(1).RDM));
+        rRDM = rdm2(labelsRand,labelsRand);
+        corrH0(randomisationI)=corr(rdm1,rsa.rdm.vectorizeRDMs(rRDM)');
+    end
+    
+    p=1-relRankIn_includeValue_lowerBound(corrH0,r12);
+        
+    % visualise results
+    figure(11); clf;
+    % plot null distribution
+    hist(perm_r12); hold on;
+    % plot accuracy (mean across folds) found in the data
+    xlim([-0.5 .975]); xlims=xlim;
+    plot(r12,0,'o','MarkerEdgeColor','r','MarkerFaceColor','r','MarkerSize',8);
+    ylims=ylim;
+    text(double(r12),0.04*ylims(2),'\bfdata','Color','r');
+    % plot statistical result
+    text(0.65*xlims(2),0.9*ylims(2),['p = ',sprintf('%1.4f',p)]);
+    % label axes
+    xlabel('rdm replicability');
+    ylabel('frequency');
+    title({'\fontsize{11}null distribution of rdm replicability',['\fontsize{8}',num2str(nRandomisations),' stimulus-label randomisations']})
+    
+    
+    % let's average the two day RDMs and visualise as MDS 
     avgRDM = averageRDMs_subjectSession(RDMs,'subject');
     avgRDM.name='hIT RDM averaged across sessions';
     
@@ -373,7 +427,8 @@ if analyse.RSA
     options.view=1;
     
     D=avgRDM.RDM(reduction,reduction);
-    [pats_mds_2D,stress,disparities]=extractMDS(D,2,options);
+    options.RDMname = 'averageRDM';
+    [pats_mds_2D,stress,disparities,description]=rsa.stat.extractMDS(D,2,options);
     
     % draw the mds
     nImages=size(pats_mds_2D,1);
@@ -443,6 +498,11 @@ if analyse.RSA
       
     % relate hIT and judgments
     userOptions.analysisName = 'animacyVsJudgments';
+    userOptions.projectName  = 'rsa-workshop';
+    
+    % let's set the nu
+    userOptions.nRandomisations = 1000;
+    userOptions.nBootstrap = 1000;
     userOptions.candRDMdifferencesTest='conditionRFXbootstrap';
     candidateRDMs=cell(1); 
     candidateRDMs{1}=judgmentRDM;
@@ -465,3 +525,11 @@ if analyse.RSA
     
 end
 
+
+%% RSA SEARCHLIGHT
+
+if analyse.RSAsearchlight
+    
+    
+    
+end
