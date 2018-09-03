@@ -56,7 +56,7 @@ numCond   = max(conditionVec);
 if (nargin>3 && ~isempty(X))  
     numReg     = size(X,2);             % Number of regressors in the first-level design matrix 
     if (numReg ~=N) 
-        error('For optimal integration of beta weights, all N regressors (including no-interest) need to be submitted in Y'); 
+        error('For optimal integration of beta weights, all N regressors (including no-interest) need to be submitted in X'); 
     end; 
 end; 
 

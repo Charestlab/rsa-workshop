@@ -145,14 +145,25 @@ if overwriteFlag
         
         
         if userOptions.writeOut==1
-            if ischar(betaCorrespondence) && strcmpi(betaCorrespondence, 'SPM')
-                betas = getDataFromSPM(userOptions);
+            if not(isempty(betaCorrespondence))
+                if ischar(betaCorrespondence) && strcmpi(betaCorrespondence, 'SPM')
+                    betas = getDataFromSPM(userOptions);
+                else
+                    betas = betaCorrespondence;
+                end%if:SPM
+                readFile = replaceWildcards(userOptions.betaPath, '[[subjectName]]', subject, '[[betaIdentifier]]', betas(1,1).identifier);
+                subjectMetadataStruct = spm_vol(readFile);
             else
-                betas = betaCorrespondence;
-            end%if:SPM
+                subjectMetadataStruct = struct(...
+                    'fname',    fullfile(userOptions.rootPath,subject,'RDMs','temp.nii'),...
+                    'dim',      userOptions.volumeSize_vox,...
+                    'dt',       [spm_type('float32') spm_platform('bigend')],...
+                    'mat',      userOptions.affine,...
+                    'pinfo', [1 0 0]',...
+                    'n',        [1 1],...
+                    'descrip',  'rsa searchlight model comparison');
+            end
             
-            readFile = replaceWildcards(userOptions.betaPath, '[[subjectName]]', subject, '[[betaIdentifier]]', betas(1,1).identifier);
-            subjectMetadataStruct = spm_vol(readFile);
         end
         %		subjectMetadataStruct = spawnSPMStruct;
         
@@ -214,8 +225,8 @@ if overwriteFlag
                         % Now read them back in
                         
                         % Where are they?
-                        [warpedPath_rMap, warpedFile_rMap, warpedExt_rMap, warpedVersion_rMap] = fileparts(rMapMetadataStruct_nS.fname);
-                        [warpedPath_mask, warpedFile_mask, warpedExt_mask, warpedVersion_mask] = fileparts(maskMetadataStruct_nS.fname);
+                        [warpedPath_rMap, warpedFile_rMap, warpedExt_rMap] = fileparts(rMapMetadataStruct_nS.fname);
+                        [warpedPath_mask, warpedFile_mask, warpedExt_mask] = fileparts(maskMetadataStruct_nS.fname);
                         
                         % Warped versions are prefixed with 'w'
                         warpedFile_rMap = ['w' warpedFile_rMap];

@@ -68,7 +68,7 @@ clear
 clc
 [workingdir,file,ext] = fileparts(which('rsa_tutorial'));
 
-analyse.rerunGLMdenoise=0;
+analyse.rerunGLMdenoise=1;
 analyse.lSVM=0;
 analyse.RSA=1;
 analyse.RSAsearchlight=1;
@@ -111,9 +111,11 @@ nSessions    = numel(sessions);
 load('pair1_subj1_extra.mat','reorderBrainBetas')
 
 % pre allocate cell arrays
-tempOnsets   = cell(1,nRuns);
-design       = cell(1,nRuns);
-tpatterns        = cell(1,nSessions);
+tempOnsets    = cell(1,nRuns); % this will be used to store our onsets
+design        = cell(1,nRuns); % this will be used to store the experiment design
+designs       = cell(1,nSessions); % this will store the denoised designs
+fullbrainvols = cell(1,nSessions); % this will store the whole-brain t-patterns.
+tpatterns     = cell(1,nSessions); % thhis will store the masked t-patterns.
 
 % the idendity of the subject will be session 1 (useful when loading mask)
 thisSubject = sessions{1};
@@ -123,7 +125,6 @@ mask = logical(spm_read_vols(spm_vol(fullfile(workingdir,thisSubject,'masks','VO
 
 % vectorize the mask
 vmask = squish(mask,3);
-
 
 % loop over the 2 sessions
 for sessionI = 1:nSessions
@@ -232,7 +233,9 @@ for sessionI = 1:nSessions
         vmodelmd     = squish(modelmd,3);
         
         % masked t-pattenrs will be nvoxels x conditions
-        tpatterns{sessionI}    = vmodelmd(vmask,:);
+        tpatterns{sessionI}     = vmodelmd(vmask,:);
+        designs{sessionI}       = results.parametric.designmatrix;
+        fullbrainvols{sessionI} = vmodelmd;
     end
     
 end
@@ -245,6 +248,13 @@ else
     % if the t-patterns already exist --> load it
     load(fullfile(workingdir,'tpatterns','tpatterns.mat'))
 end
+
+% save the data if not existing already otherwise load it
+if ~(exist(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'),'file')) || analyse.rerunGLMdenoise==1
+    % save the fullbrainvolumes
+    save(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'),'fullbrainvols','designs','-v7.3');
+end
+
 
 
 %% animate vs. inanimate classification using linear SVM
@@ -529,6 +539,81 @@ end
 %% RSA SEARCHLIGHT
 
 if analyse.RSAsearchlight
+    
+    thisSubject = 'CBU101295';
+        
+    % load behavioural RDM
+    extra=load('pair1_subj1_extra.mat','behav_and_icons');
+    
+    judgmentRDM.RDM  = extra.behav_and_icons.RDM;
+    judgmentRDM.name = 'similarityJudgments';
+    clear extra
+    
+    
+    % also define an animacy model
+    OwnBodyParts = 1:3; OwnFaces = 4:8; OwnPet = 9; OwnPlaces = 10:15; OwnObjects=16:18;
+    OtherBodyParts = 19:21; OtherFaces = 22:26; OtherPet = 27; OtherPlaces = 28:33; OtherObjects=34:36;
+    GeneralBodyParts = 37:44; GeneralFaces = 45:52; GeneralPets = [53 54]; GeneralPlaces=55:66; GeneralObjects=67:72;
+    animates=[OwnBodyParts OwnFaces OwnPet OtherBodyParts OtherFaces OtherPet GeneralBodyParts GeneralFaces GeneralPets];
+    inanimates=[OwnPlaces OwnObjects OtherPlaces OtherObjects GeneralPlaces GeneralObjects];
+    
+    model.RDM = ones(72,72);
+    model.RDM(animates,animates) = 0;
+    model.RDM(inanimates,inanimates) = 0;
+    model.name = 'animacy';    
+       
+    
+    % if the t-patterns already exist --> load it
+    load(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'));
+    
+    % load global mask   
+    
+    % write the mask as nifti
+    %     maskV = spm_vol(fullfile(workingdir,thisSubject,'masks','mask.img'));
+    %     mask = logical(spm_read_vols(spm_vol(fullfile(workingdir,thisSubject,'masks','mask.img'))));
+    %     maskV.fname = 'CBU101295/masks/mask.nii';
+    %     spm_write_vol(maskV,mask);
+
+    maskV  = spm_vol(fullfile(workingdir,thisSubject,'masks','mask.nii'));
+    mask   = logical(spm_read_vols(maskV));
+    
+    userOptions.analysisName      = 'searchlight';
+    userOptions.projectName       = 'rsa-workshop';
+    userOptions.voxelSize         = [3 3 3.75];
+    userOptions.volumeSize_vox    = [64 64 32];
+    userOptions.searchlightRadius = 9;
+    userOptions.rootPath          = pwd;
+    userOptions.structuralsPath   = fullfile(userOptions.rootPath,'[[subjectName]]','structurals');
+    userOptions.subjectNames      = {thisSubject};
+    userOptions.maskNames         = {'mask'};
+    userOptions.affine            = maskV.mat;
+    
+    % let's visualise the mask
+    figure; imagesc(makeimagestack(mask));
+        
+    % let's feed the rsa toolbox with something it likes
+    % also see +rsa/fmri/fMRIDataPreparation
+    thisVols.('CBU101295') = cat(3,fullbrainvols{1},fullbrainvols{2});
+    thisMasks.('CBU101295').('mask') = mask;
+    
+    
+    searchlightRDMs = rsa.fmri.fMRIPrepareSearchlightRDMs(thisVols,thisMasks,userOptions);
+    
+    figure; imagesc(makeimagestack(squeeze(mean(searchlightRDMs.(thisSubject).(userOptions.maskNames{1}),1))))
+    
+    candidateRDMs(1).RDM = judgmentRDM.RDM;
+    candidateRDMs(1).name = judgmentRDM.name;
+    candidateRDMs(2).RDM = model.RDM;
+    candidateRDMs(2).name = model.name;
+        
+    
+    [rMaps_mni,srMaps_mni,rMaps,nMaps] = fMRISearchlightModelComparison(candidateRDMs,thisMasks, [], userOptions);
+    
+    figure; imagesc(makeimagestack(srMaps_mni.similarityJudgments.CBU101295.mask))
+    figure; imagesc(makeimagestack(srMaps_mni.animacy.CBU101295.mask))
+    
+    figure; imagesc(makeimagestack(srMaps_mni.animacy.CBU101295.mask-srMaps_mni.similarityJudgments.CBU101295.mask));
+    
     
     
     
