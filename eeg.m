@@ -2,6 +2,8 @@ dataroot = '/media/charesti-start/data/irsa-eeg/BIDS/derivatives/eegprep/';
 % trials x channels x timepoints
 data = load(fullfile(dataroot, 'sub-01', 'sub-01_task-irsa_epo.mat'));
 
+% plot grand average per trial
+plot(squeeze(mean(data.epochs, 1)).');
 
 % conditions = unique(data.events);
 % dims = size(data.epochs);
