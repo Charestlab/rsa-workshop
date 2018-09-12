@@ -208,7 +208,7 @@ for sessionI = 1:nSessions
         % normalise the betas by the pooled error to get t-patterns
         modelmd = bsxfun(@rdivide,modelmd,poolse);
         
-        % plot one run's design matrix
+        % plot one session's design matrix
         figure(1);
         set(gcf,'Position',[100 100 400 800],'Color','w')
         imagesc(results.parametric.designmatrix);colormap(gray)
@@ -216,6 +216,19 @@ for sessionI = 1:nSessions
         xlabel('\bf{number of conditions}')
         title(sprintf('design matrix with noise covariates for session %d',sessionI),'FontSize',14,'Fontweight','bold')
 
+        % plot one run's hIT time series
+        figure(2);
+        thisData = data{1};
+        vthisData = squish(thisData,3);
+        vmask     = squish(mask,3);
+        maskedTS  =  vthisData(vmask,:);
+        set(gcf,'Position',[100 100 1200 200],'Color','w')
+        plot(maskedTS(10,:)');
+        set(gca,'XLim',[0 217]);
+        xlabel('volumes');
+        ylabel('BOLD signal');
+        saveas(gcf,'voxel-ts','svg');
+        
         
         % show the unmasked patterns
         figure(1);
@@ -231,6 +244,17 @@ for sessionI = 1:nSessions
         title('\bf{mean t-pattern masked to hIT}')
         
         vmodelmd     = squish(modelmd,3);
+       
+        
+        t_pattern = vmodelmd(logical(vmask),:);
+        figure(2);
+        set(gcf,'Position',[100 100 600 800],'Color','w')
+        imagesc(t_pattern);
+        colormap(rsa.fig.RDMcolormap)
+        xlabel('\bf{stimulus conditions}')
+        ylabel('\bf{hIT voxels}')
+        title('\bf{t-patterns masked to hIT}')
+        
         
         % masked t-pattenrs will be nvoxels x conditions
         tpatterns{sessionI}     = vmodelmd(vmask,:);
@@ -614,7 +638,8 @@ if analyse.RSAsearchlight
     
     figure; imagesc(makeimagestack(srMaps_mni.animacy.CBU101295.mask-srMaps_mni.similarityJudgments.CBU101295.mask));
     
-    
+    % the typical searchlight analysis would then continue in spm, where 
+    % smoothed rMaps would be entered with group level random effects analyses.  
     
     
 end
