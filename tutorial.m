@@ -68,7 +68,7 @@ clear
 clc
 [workingdir,file,ext] = fileparts(which('rsa_tutorial'));
 
-analyse.rerunGLMdenoise=1;
+analyse.rerunGLMdenoise=0;
 analyse.lSVM=0;
 analyse.RSA=1;
 analyse.RSAsearchlight=1;
@@ -401,7 +401,7 @@ if analyse.RSA
     % visualise results
     figure(11); clf;
     % plot null distribution
-    hist(perm_r12); hold on;
+    hist(corrH0); hold on;  % WAS hist(perm_r12)
     % plot accuracy (mean across folds) found in the data
     xlim([-0.5 .975]); xlims=xlim;
     plot(r12,0,'o','MarkerEdgeColor','r','MarkerFaceColor','r','MarkerSize',8);
@@ -412,16 +412,19 @@ if analyse.RSA
     % label axes
     xlabel('rdm replicability');
     ylabel('frequency');
-    title({'\fontsize{11}null distribution of rdm replicability',['\fontsize{8}',num2str(nRandomisations),' stimulus-label randomisations']})
+    % WAS nRandomisations below was missing 'analyse.'
+    title({'\fontsize{11}null distribution of rdm replicability',['\fontsize{8}',num2str(analyse.nRandomisations),' stimulus-label randomisations']})
     
     
     % let's average the two day RDMs and visualise as MDS 
-    avgRDM = averageRDMs_subjectSession(RDMs,'subject');
+    % WAS missing rsa.rdm. below
+    avgRDM = rsa.rdm.averageRDMs_subjectSession(RDMs,'subject');
     avgRDM.name='hIT RDM averaged across sessions';
     
     figI=2;
     figure(figI);set(gcf,'Position',[100 100 800 800],'Color','w')
-    showRDMs(avgRDM,figI);
+    % WAS missing rsa.fig.
+    rsa.fig.showRDMs(avgRDM,figI);
     
     
     % define the labels and indices for familiar and unfamiliar images
@@ -447,7 +450,7 @@ if analyse.RSA
         objects = GeneralObjects-36;
     end
     nCols=4;
-    cmap=RDMcolormap;
+    cmap=rsa.fig.RDMcolormap;
     colors=cmap([1 65 193 222],:);
     options.categoryColors=zeros(36,3);
     options.categoryColors(bodies,:)=repmat(colors(1,:),length(bodies),1);
@@ -631,12 +634,15 @@ if analyse.RSAsearchlight
     candidateRDMs(2).name = model.name;
         
     
-    [rMaps_mni,srMaps_mni,rMaps,nMaps] = fMRISearchlightModelComparison(candidateRDMs,thisMasks, [], userOptions);
+    [rMaps_mni,srMaps_mni,rMaps,nMaps] = rsa.fmri.fMRISearchlightModelComparison(candidateRDMs,thisMasks, [], userOptions);
     
     figure; imagesc(makeimagestack(srMaps_mni.similarityJudgments.CBU101295.mask))
     figure; imagesc(makeimagestack(srMaps_mni.animacy.CBU101295.mask))
     
     figure; imagesc(makeimagestack(srMaps_mni.animacy.CBU101295.mask-srMaps_mni.similarityJudgments.CBU101295.mask));
+    
+    test = srMaps_mni.animacy.CBU101295.mask-srMaps_mni.similarityJudgments.CBU101295.mask;
+    figure; hist(test(:));
     
     % the typical searchlight analysis would then continue in spm, where 
     % smoothed rMaps would be entered with group level random effects analyses.  
