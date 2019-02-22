@@ -1,4 +1,4 @@
 *.m~
-*.mat
-*.nii
+.mat
+.nii
 *.tar.gz
