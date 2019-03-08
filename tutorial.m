@@ -274,9 +274,9 @@ else
 end
 
 % save the data if not existing already otherwise load it
-if ~(exist(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'),'file')) || analyse.rerunGLMdenoise==1
+if ~(exist(fullfile(workingdir,'fullbrainvols.mat'),'file')) || analyse.rerunGLMdenoise==1
     % save the fullbrainvolumes
-    save(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'),'fullbrainvols','designs','-v7.3');
+    save(fullfile(workingdir,'fullbrainvols.mat'),'fullbrainvols','designs','-v7.3');
 end
 
 
@@ -591,7 +591,7 @@ if analyse.RSAsearchlight
        
     
     % if the t-patterns already exist --> load it
-    load(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'));
+    load(fullfile(workingdir,'fullbrainvols.mat'));
     
     % load global mask   
     
