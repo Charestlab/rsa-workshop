@@ -566,6 +566,8 @@ end
 %% RSA SEARCHLIGHT
 
 if analyse.RSAsearchlight
+    % cell array before, now struct
+    clear candidateRDMs
     
     thisSubject = 'CBU101295';
         
