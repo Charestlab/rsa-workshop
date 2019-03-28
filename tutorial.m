@@ -185,7 +185,7 @@ for sessionI = 1:nSessions
     xlabel('\bf{number of conditions}')
     title(sprintf('design matrix for run 1 session %d',sessionI),'FontSize',14,'Fontweight','bold')
     
-    if ~(exist(fullfile(workingdir,'tpatterns','tpatterns.mat'),'file')) || analyse.rerunGLMdenoise==1
+    if ~(exist(fullfile(workingdir,'tpatterns.mat'),'file')) || analyse.rerunGLMdenoise==1
         data = cell(1,nRuns);
         % load the nifti data;
         for runI=1:nRuns
@@ -265,18 +265,18 @@ for sessionI = 1:nSessions
 end
 
 % save the data if not existing already otherwise load it
-if ~(exist(fullfile(workingdir,'tpatterns','tpatterns.mat'),'file')) || analyse.rerunGLMdenoise==1
+if ~(exist(fullfile(workingdir,'tpatterns.mat'),'file')) || analyse.rerunGLMdenoise==1
     % save the t-patterns
-    save(fullfile(workingdir,'tpatterns','tpatterns.mat'),'tpatterns')
+    save(fullfile(workingdir,'tpatterns.mat'),'tpatterns')
 else
     % if the t-patterns already exist --> load it
-    load(fullfile(workingdir,'tpatterns','tpatterns.mat'))
+    load(fullfile(workingdir,'tpatterns.mat'))
 end
 
 % save the data if not existing already otherwise load it
-if ~(exist(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'),'file')) || analyse.rerunGLMdenoise==1
+if ~(exist(fullfile(workingdir,'fullbrainvols.mat'),'file')) || analyse.rerunGLMdenoise==1
     % save the fullbrainvolumes
-    save(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'),'fullbrainvols','designs','-v7.3');
+    save(fullfile(workingdir,'fullbrainvols.mat'),'fullbrainvols','designs','-v7.3');
 end
 
 
@@ -566,6 +566,8 @@ end
 %% RSA SEARCHLIGHT
 
 if analyse.RSAsearchlight
+    % cell array before, now struct
+    clear candidateRDMs
     
     thisSubject = 'CBU101295';
         
@@ -591,7 +593,7 @@ if analyse.RSAsearchlight
        
     
     % if the t-patterns already exist --> load it
-    load(fullfile(workingdir,'fullbrainvols','fullbrainvols.mat'));
+    load(fullfile(workingdir,'fullbrainvols.mat'));
     
     % load global mask   
     
