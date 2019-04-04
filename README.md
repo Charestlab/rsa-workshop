@@ -1,6 +1,6 @@
 # rsa-workshop
 
-Edinburgh:
+## Edinburgh:
 
 http://www.sbirc.ed.ac.uk/cyril/SPM-course/SPM_course_2019.html
 
@@ -14,7 +14,7 @@ Friday 5 April 2019 (Afternoon)
 
 BMTO teaching rooms: Representational Similarity Analysis, from brain patterns to RDMs and inference.
 
-Cambridge:
+## Cambridge:
 
 http://imaging.mrc-cbu.cam.ac.uk/methods/IntroductionNeuroimagingLectures
 
