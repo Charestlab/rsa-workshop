@@ -1,6 +1,10 @@
 clc
 clear
 
+% this is heavily inspired by the great MEG MVPA tutorial of
+% Matthias Guggenmos
+% https://github.com/m-guggenmos/megmvpa
+
 load('/media/rdsfs2/irsaeeg_2016/Data_old/YC_180787/SET-ERPs/mat_binIMG_mrk_p_YC_180787.mat')
 
 desiredtimes = 154:length(times);
